@@ -12,7 +12,7 @@ from atlas_server.tools import initialize_db_schema # <--- Importar la función
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from atlas_server.tools import crear_tarea, actualizar_estado_tarea, crear_recordatorio, crear_proyecto_y_tareas, listar_tareas, listar_proyectos   
+from atlas_server.tools import crear_tarea, actualizar_estado_tarea, crear_recordatorio, crear_proyecto_y_tareas, listar_tareas, listar_proyectos, eliminar_proyecto, eliminar_tarea   
 TOOLS_LIST = [
     {
         "type": "function", 
@@ -24,7 +24,7 @@ TOOLS_LIST = [
             "parameters": func.input_schema 
         }
     }
-    for func in [crear_tarea, actualizar_estado_tarea, crear_recordatorio, crear_proyecto_y_tareas, listar_tareas, listar_proyectos]
+    for func in [crear_tarea, actualizar_estado_tarea, crear_recordatorio, crear_proyecto_y_tareas, listar_tareas, listar_proyectos, eliminar_proyecto, eliminar_tarea]
 ]
 
 load_dotenv()
@@ -50,7 +50,7 @@ def run_mcp_command(command: str) -> str:
         server_dir = os.path.join(os.path.dirname(__file__), '..', 'atlas_server')
         server_path = os.path.join(server_dir, 'server.py')
 
-        print(f"   [COMANDO MCP ENVIADO]: {command[:80]}...") 
+        #print(f"   [COMANDO MCP ENVIADO]: {command[:80]}...") 
 
         env = os.environ.copy()
         env['PYTHONPATH'] = server_dir + os.pathsep + env.get('PYTHONPATH', '')
@@ -89,18 +89,18 @@ No respondas con texto conversacional sobre el estado o la creación si la solic
 # --- 3. Bucle de Conversación Principal ---
 async def chat_with_atlas():
     initialize_db_schema()
-    print("🤖 ATLAS: ¡Hola! Soy ATLAS, tu gestor de proyectos. ¿Cómo puedo ayudarte hoy?")
+    print("🌐 ATLAS: ¡Hola! Soy ATLAS, tu gestor de proyectos. ¿Cómo puedo ayudarte hoy?")
     messages : list[dict[str, Any]] = [{"role": "system", "content": SYSTEM_PROMPT}]
 
     while True:
         user_input = input("\nTú: ")
-        if user_input.lower() in ["salir", "adios", "exit", "q"]:
-            print("🤖 ATLAS: ¡Hasta pronto!")
+        if user_input.lower() in ["salir", "adios", "exit", "q", "adiós", "bye", "hasta luego"]:
+            print("🌐 ATLAS: ¡Hasta pronto!")
             break
 
         messages.append({"role": "user", "content": user_input})
         
-        print("Procesando...")
+        print("Procesando...\n")
 
         # Llamada a la API de OpenAI
         try:
@@ -120,7 +120,7 @@ async def chat_with_atlas():
         # --- 4. Procesamiento de Llamada a Herramienta ---
         if response_message.tool_calls:
             messages.append(response_message)
-            print("Llamada  a herramienta...\n")
+            # print("Llamada  a herramienta...\n")
 
             tool_output=""
             
@@ -145,8 +145,8 @@ async def chat_with_atlas():
                 if not tool_output.startswith("❌ Error al decodificar"):
                     tool_output = run_mcp_command(mcp_command)   
 
-                if not tool_output.startswith("❌ Error Crítico"):
-                    print(f"🛠️ Resultado de la Herramienta ({function_name}): {tool_output}")
+                #if not tool_output.startswith("❌ Error Crítico"):
+                #    print(f"🛠️ Resultado de la Herramienta ({function_name}): {tool_output}")
 
                 # Añadir la respuesta de la herramienta al historial de mensajes
                 messages.append(
@@ -164,13 +164,13 @@ async def chat_with_atlas():
                 model=model_name,
                 messages=messages
             )
-            print("🤖 ATLAS:", final_response.choices[0].message.content)
+            print("🌐 ATLAS:", final_response.choices[0].message.content)
             messages.append(final_response.choices[0].message)
         
         else:
             # Respuesta simple del modelo sin usar herramientas
-            print("⚠️ ADVERTENCIA: El LLM no generó una llamada a herramienta. Respondió con texto conversacional.")
-            print("🤖 ATLAS:", response_message.content)
+            # print("⚠️ ADVERTENCIA: El LLM no generó una llamada a herramienta. Respondió con texto conversacional.")
+            print("🌐 ATLAS:", response_message.content)
             messages.append(response_message)
 
 if __name__ == '__main__':

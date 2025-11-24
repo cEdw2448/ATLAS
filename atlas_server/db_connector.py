@@ -17,7 +17,7 @@ DB_CONFIG = {
 }
 
 def get_db_connection(max_retries=5):
-    print(f"DEBUG: Intentando conectar a HOST={DB_CONFIG['host']}:PORT={DB_CONFIG['port']} con USER={DB_CONFIG['user']}")
+    #print(f"DEBUG: Intentando conectar a HOST={DB_CONFIG['host']}:PORT={DB_CONFIG['port']} con USER={DB_CONFIG['user']}")
 
     """Establece y devuelve una conexión a la base de datos PostgreSQL con reintentos."""
     for attempt in range(max_retries):

@@ -7,10 +7,10 @@ import asyncio
 from mcp.server import Server 
 from mcp.types import Tool
 # Importamos todas las funciones de herramientas
-from tools import crear_tarea, actualizar_estado_tarea, crear_recordatorio, crear_proyecto_y_tareas, listar_tareas, listar_proyectos 
+from tools import crear_tarea, actualizar_estado_tarea, crear_recordatorio, crear_proyecto_y_tareas, listar_tareas, listar_proyectos, eliminar_tarea, eliminar_proyecto 
 
 # Lista que contiene todas las funciones de las herramientas
-ALL_TOOLS = [crear_tarea, actualizar_estado_tarea, crear_recordatorio, crear_proyecto_y_tareas, listar_tareas, listar_proyectos]
+ALL_TOOLS = [crear_tarea, actualizar_estado_tarea, crear_recordatorio, crear_proyecto_y_tareas, listar_tareas, listar_proyectos, eliminar_tarea, eliminar_proyecto]
 
 # Inicialización del servidor MCP
 atlas_server = Server(name="ATLAS_MCP_Server")

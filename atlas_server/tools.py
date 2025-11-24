@@ -18,7 +18,6 @@ def tool(name, description, pydantic_class):
         func.input_schema = pydantic_class.model_json_schema(by_alias=True)
         return func
     return decorator
-# ----------------------------------------------------
 
 # ----------------------------------------------------
 # 0. INICIALIZACIÓN DE LA BASE DE DATOS 
@@ -57,7 +56,7 @@ def initialize_db_schema():
         """)
         
         conn.commit()
-        print("✅ Esquema de base de datos inicializado (tablas projects y tasks creadas/verificadas con esquema simplificado).")
+        print("✅ Conexión a base de datos exitosa.")
         
     except Exception as e:
         print(f"❌ ADVERTENCIA: No se pudo inicializar el esquema de la base de datos. Las herramientas podrían fallar. Error: {e}")
@@ -89,6 +88,13 @@ class ListarTareasInput(BaseModel):
 
 class ListarProyectosInput(BaseModel):
     nombre: str = Field(None, description="Filtra proyectos por nombre (búsqueda parcial).")
+
+class EliminarTareaInput(BaseModel):
+    tarea_id: int = Field(..., description="El ID numérico de la tarea a eliminar.")
+
+class EliminarProyectoInput(BaseModel):
+    proyecto_id: int = Field(...,description="El ID del proyecto a eliminar.")
+
 
 # --- HERRAMIENTAS ATLAS ---
 
@@ -308,4 +314,81 @@ async def listar_proyectos(nombre: str = None) -> str:
     except Exception as e:
         return f"❌ Error al listar proyectos: {e}"
     finally:
+        conn.close()
+
+@tool(
+    name="eliminar_tarea",
+    description="Elimina una tarea individual con un título en un proyecto específico. Requiere el ID del proyecto.",
+    pydantic_class=EliminarTareaInput
+)
+async def eliminar_tarea(tarea_id: int) -> str:
+    """Elimina una tarea en la tabla 'tasks' por su ID."""
+    conn = get_db_connection()
+    if conn is None: return "❌ Error de Conexión: No se pudo conectar a la base de datos."
+    cursor = conn.cursor()
+    try:
+        # 1. Obtener la descripción para el mensaje de respuesta (opcional, pero útil)
+        cursor.execute("SELECT description FROM tasks WHERE id = %s", (tarea_id,))
+        task_info = cursor.fetchone()
+        
+        if task_info is None:
+            conn.close()
+            return f"❌ Error: No se encontró la tarea con ID {tarea_id} para eliminar."
+            
+        description = task_info[0]
+        
+        # 2. Eliminar la tarea
+        cursor.execute(
+            "DELETE FROM tasks WHERE id = %s",
+            (tarea_id,)
+        )
+        conn.commit()
+        return f"✅ Tarea ID {tarea_id} ('{description}') eliminada exitosamente."
+        
+    except Exception as e:
+        conn.rollback()
+        return f"❌ Error al eliminar la tarea {tarea_id}. Error: {e}"
+    finally:
+        cursor.close()
+        conn.close()
+
+@tool(
+    name="eliminar_proyecto",
+    description="Elimina un proyecto específico usando su ID. **ADVERTENCIA:** Esto también elimina TODAS las tareas asociadas a ese proyecto.",
+    pydantic_class=EliminarProyectoInput
+)
+async def eliminar_proyecto(proyecto_id: int) -> str:
+    """Elimina un proyecto de la tabla 'projects' por su ID, eliminando automáticamente sus tareas."""
+    conn = get_db_connection()
+    if conn is None: return "❌ Error de Conexión: No se pudo conectar a la base de datos."
+    cursor = conn.cursor()
+    try:
+        # 1. Obtener el nombre del proyecto para el mensaje de respuesta (opcional, pero útil)
+        cursor.execute("SELECT name FROM projects WHERE id = %s", (proyecto_id,))
+        project_info = cursor.fetchone()
+        
+        if project_info is None:
+            conn.close()
+            return f"❌ Error: No se encontró el proyecto con ID {proyecto_id} para eliminar."
+            
+        project_name = project_info[0]
+        
+        # 2. Eliminar el proyecto (y las tareas se eliminan en cascada gracias al FOREIGN KEY ON DELETE CASCADE)
+        cursor.execute(
+            "DELETE FROM projects WHERE id = %s",
+            (proyecto_id,)
+        )
+        
+        if cursor.rowcount == 0:
+            conn.rollback() # Aunque no hubo cambios, mejor asegurar
+            return f"❌ Error: No se encontró el proyecto con ID {proyecto_id} para eliminar."
+
+        conn.commit()
+        return f"✅ Proyecto ID {proyecto_id} ('{project_name}') eliminado exitosamente. Sus tareas también fueron eliminadas."
+        
+    except Exception as e:
+        conn.rollback()
+        return f"❌ Error al eliminar el proyecto {proyecto_id}. Error: {e}"
+    finally:
+        cursor.close()
         conn.close()
